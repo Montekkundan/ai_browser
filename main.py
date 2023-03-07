@@ -63,7 +63,20 @@ class MainWindow(QMainWindow):
         self._bookmark_widget.open_bookmark.connect(self.load_url)
         self._bookmark_widget.open_bookmark_in_new_tab.connect(self.load_url_in_new_tab)
         self._bookmark_dock.setWidget(self._bookmark_widget)
+
+        self._book_dock = QDockWidget()
+        self._book_dock.setWindowTitle('Book')
+        self._book_widget = BookmarkWidget()
+        self._book_widget.open_bookmark.connect(self.load_url)
+        self._book_widget.open_bookmark_in_new_tab.connect(self.load_url_in_new_tab)
+        self._book_dock.setWidget(self._bookmark_widget)
+
+        self._bookmark_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self._book_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+
         self.addDockWidget(Qt.LeftDockWidgetArea, self._bookmark_dock)
+
+        self.splitDockWidget(self._bookmark_dock, self._book_dock, Qt.Vertical)
 
         self._find_tool_bar = None
 
@@ -244,7 +257,7 @@ class MainWindow(QMainWindow):
         about_menu.addAction(about_action)
 
     def add_browser_tab(self):
-        return self._tab_widget.add_browser_tab()
+        return self._tab_widget.add_browser_tab("https://bing.com")
 
     def _close_current_tab(self):
         if self._tab_widget.count() > 1:

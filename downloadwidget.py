@@ -18,9 +18,11 @@ class DownloadWidget(QProgressBar):
     def __init__(self, download_item):
         super().__init__()
         self._download_item = download_item
-        download_item.finished.connect(self._finished)
-        download_item.downloadProgress.connect(self._download_progress)
+        # download_item.finished.connect(self._finished)
+        download_item.stateChanged.connect(self._state_changed)
+        # download_item.downloadProgress.connect(self._download_progress)
         download_item.stateChanged.connect(self._update_tool_tip())
+
         path = download_item.path()
         self.setMaximumWidth(300)
         # Shorten 'PySide6-5.11.0a1-5.11.0-cp36-cp36m-linux_x86_64.whl'...
@@ -44,6 +46,16 @@ class DownloadWidget(QProgressBar):
     def open_file(file):
         QDesktopServices.openUrl(QUrl.fromLocalFile(file))
 
+    def _state_changed(self, state):
+        if state == QWebEngineDownloadRequest.DownloadCompleted:
+            # Do something when the download is completed
+            self.finished.emit()
+        elif state == QWebEngineDownloadRequest.DownloadCancelled:
+            # Do something when the download is cancelled
+            self.remove_requested.emit()
+        elif state == QWebEngineDownloadRequest.DownloadInterrupted:
+            # Do something when the download is interrupted
+            self._update_tool_tip()
     @staticmethod
     def open_download_directory():
         path = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)

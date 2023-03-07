@@ -39,7 +39,6 @@ class HistoryModel(QAbstractTableModel):
 
 
 class HistoryWindow(QTreeView):
-
     open_url = Signal(QUrl)
 
     def __init__(self, history, parent):
@@ -49,7 +48,7 @@ class HistoryWindow(QTreeView):
         self.setModel(self._model)
         self.activated.connect(self._activated)
 
-        screen = QApplication.desktop().screenGeometry(parent)
+        screen = QApplication.instance().screens()[0].availableGeometry()
         self.resize(screen.width() / 3, screen.height() / 3)
         self._adjustSize()
 
@@ -58,7 +57,7 @@ class HistoryWindow(QTreeView):
         self._adjustSize()
 
     def _adjustSize(self):
-        if (self._model.rowCount() > 0):
+        if self._model.rowCount() > 0:
             self.resizeColumnToContents(0)
 
     def _activated(self, index):

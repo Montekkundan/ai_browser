@@ -12,6 +12,10 @@ from PySide6.QtWidgets import QMenu, QTabBar, QTabWidget
 from PySide6.QtWebEngineCore import QWebEngineDownloadRequest, QWebEnginePage
 
 
+# TODO: Expected Release November 2023
+# from PySide6.QtWebEngineWidgets import QWebEnginePage
+
+
 class BrowserTabWidget(QTabWidget):
     """Enables having several tabs with QWebEngineView."""
 
@@ -21,6 +25,7 @@ class BrowserTabWidget(QTabWidget):
 
     def __init__(self, window_factory_function):
         super().__init__()
+        self.added_url = None
         self.setTabsClosable(True)
         self._window_factory_function = window_factory_function
         self._webengineviews = []
@@ -36,23 +41,32 @@ class BrowserTabWidget(QTabWidget):
         tab_bar.setContextMenuPolicy(Qt.CustomContextMenu)
         tab_bar.customContextMenuRequested.connect(self._handle_tab_context_menu)
 
-    def add_browser_tab(self):
+    def add_browser_tab(self, url=''):
         factory_func = partial(BrowserTabWidget.add_browser_tab, self)
         web_engine_view = WebEngineView(factory_func,
                                         self._window_factory_function)
         index = self.count()
         self._webengineviews.append(web_engine_view)
-        title = f'Tab {index + 1}'
-        self.addTab(web_engine_view, title)
+        self.added_url = url
+
         page = web_engine_view.page()
+        if url != '':
+            web_engine_view.setUrl(url)
+            page = web_engine_view.page()
+            page.titleChanged.connect(self._update_tab_title)
         page.titleChanged.connect(self._title_changed)
         page.iconChanged.connect(self._icon_changed)
         page.profile().downloadRequested.connect(self._download_requested)
         web_engine_view.urlChanged.connect(self._url_changed)
         web_engine_view.enabled_changed.connect(self._enabled_changed)
+        title = f'{page.title()}'
+        self.addTab(web_engine_view, title)
         self.setCurrentIndex(index)
         return web_engine_view
 
+    def _update_tab_title(self, title):
+        index = self.currentIndex()
+        self.setTabText(index, f'{title} ')
     def load(self, url):
         index = self.currentIndex()
         if index >= 0 and url.isValid():
@@ -71,12 +85,12 @@ class BrowserTabWidget(QTabWidget):
     def _url_changed(self, url):
         index = self.currentIndex()
         if index >= 0 and self._webengineviews[index] == self.sender():
-                self.url_changed.emit(url)
+            self.url_changed.emit(url)
 
     @Slot(str)
     def _title_changed(self, title):
         index = self._index_of_page(self.sender())
-        if (index >= 0):
+        if index >= 0:
             self.setTabText(index, BookmarkWidget.short_title(title))
 
     @Slot(QIcon)
@@ -85,7 +99,7 @@ class BrowserTabWidget(QTabWidget):
         if (index >= 0):
             self.setTabIcon(index, icon)
 
-    @Slot(object,bool)
+    @Slot(object, bool)
     def _enabled_changed(self, web_action, enabled):
         index = self.currentIndex()
         if index >= 0 and self._webengineviews[index] == self.sender():
@@ -101,7 +115,7 @@ class BrowserTabWidget(QTabWidget):
         self.url_changed.emit(self.url())
 
     def _update_actions(self, index):
-        if index >= 0 and index < len(self._webengineviews):
+        if 0 <= index < len(self._webengineviews):
             view = self._webengineviews[index]
             for web_action in WebEngineView.web_actions():
                 enabled = view.is_web_action_enabled(web_action)
@@ -191,6 +205,9 @@ class BrowserTabWidget(QTabWidget):
             if self._history_windows.get(webengineview):
                 del self._history_windows[webengineview]
             self._webengineviews.remove(webengineview)
+            widget = self.widget(index)
+            widget.close()
+            widget.deleteLater()
             self.removeTab(index)
 
     def close_current_tab(self):
